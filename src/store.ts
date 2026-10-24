@@ -3,6 +3,7 @@ import path from "node:path";
 import type Anthropic from "@anthropic-ai/sdk";
 import { config } from "./config.js";
 import type { LeadInput } from "./tools.js";
+import type { Channel } from "./prompt.js";
 
 export interface Lead extends LeadInput {
   id: string;
@@ -17,6 +18,8 @@ export interface Session {
   createdAt: string;
   updatedAt: string;
   pageUrl: string | null;
+  /** Canal fijado al iniciar la conversación (define qué prompt de sistema se usa). */
+  channel: Channel;
   userTurns: number;
   /** Historial completo tal como se envía a la API (solo se agrega, nunca se edita). */
   messages: Anthropic.Beta.BetaMessageParam[];
@@ -32,12 +35,13 @@ const sessions = new Map<string, Session>();
 const SESSION_ID = /^[a-zA-Z0-9_-]{8,64}$/;
 export const isValidSessionId = (id: string) => SESSION_ID.test(id);
 
-export function getOrCreateSession(id: string, pageUrl: string | null): Session {
+export function getOrCreateSession(id: string, pageUrl: string | null, channel: Channel): Session {
   const cached = sessions.get(id);
   if (cached) return cached;
   const file = path.join(convDir, `${id}.json`);
   if (fs.existsSync(file)) {
     const loaded = JSON.parse(fs.readFileSync(file, "utf8")) as Session;
+    loaded.channel ??= "texto";
     sessions.set(id, loaded);
     return loaded;
   }
@@ -47,6 +51,7 @@ export function getOrCreateSession(id: string, pageUrl: string | null): Session 
     createdAt: now,
     updatedAt: now,
     pageUrl,
+    channel,
     userTurns: 0,
     messages: [],
     leadId: null,

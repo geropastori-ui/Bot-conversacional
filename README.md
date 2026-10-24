@@ -1,6 +1,6 @@
 # Bot conversacional — Senda Consultora
 
-Asistente con IA (Claude) para el sitio web de Senda Consultora. Conversa con los visitantes,
+Asistente **por voz** con IA (Claude) para el sitio web de Senda Consultora. Conversa con los visitantes,
 los asesora sobre los servicios de la consultora (marketing, estrategia comercial, finanzas,
 IA y otros), registra cada consulta y envía los leads calificados al equipo por webhook.
 
@@ -77,7 +77,28 @@ manda un email al equipo con cada lead nuevo.
 Con **Zapier / Make / n8n** usá un trigger "Webhook" y pegá su URL en `LEAD_WEBHOOK_URL`; desde
 ahí lo podés mandar a HubSpot, Pipedrive, Slack, etc.
 
-## Insertar el chat en el sitio web
+## Cómo funciona la voz
+
+El widget es una "llamada" manos libres dentro de la web: la persona toca **Hablá con
+nosotros**, el asistente la saluda en voz alta y a partir de ahí conversan por turnos. El bot
+escucha, responde con voz (empieza a hablar apenas tiene la primera oración) y vuelve a escuchar.
+
+- Usa el reconocimiento y la síntesis de voz **del navegador**: sin costo extra. Funciona en
+  Chrome, Edge y Safari (computadora y celular). En Firefox no hay reconocimiento de voz, así
+  que ofrece escribir.
+- La transcripción de lo que se dice queda en pantalla como subtítulos.
+- Tocar la esfera mientras el bot habla lo interrumpe y vuelve a escuchar. Después de 3
+  silencios seguidos se pausa para no dejar el micrófono abierto.
+- Botón **Prefiero escribir** para quien no quiera o no pueda hablar.
+- En modo voz el bot usa reglas propias (`src/prompt.ts`): respuestas de 1 a 3 oraciones,
+  sin listas ni emojis, prefiere pedir teléfono/WhatsApp y repite los datos de contacto para
+  confirmarlos antes de registrar el lead.
+- **Requiere HTTPS** en el sitio (el navegador no habilita el micrófono en http, salvo en localhost).
+- La calidad de la voz depende del dispositivo (en Chrome suele usar las voces de Google). Si
+  más adelante se quiere una voz más natural, se puede cambiar por un servicio pago como
+  ElevenLabs sin tocar el resto.
+
+## Insertar el widget en el sitio web
 
 Antes de `</body>`:
 
@@ -88,7 +109,8 @@ Antes de `</body>`:
 ```
 
 Y agregá el dominio del sitio a `ALLOWED_ORIGINS` en `.env`. Otros atributos opcionales:
-`data-subtitle`, `data-greeting`, `data-api` (si el servidor está en otra URL que el script).
+`data-subtitle`, `data-greeting` (el saludo hablado), `data-lang` (idioma de la voz, por defecto
+`es-AR`; ej. `es-ES`, `es-MX`), `data-api` (si el servidor está en otra URL que el script).
 Funciona en WordPress, Webflow, Wix, Tiendanube, etc. (cualquier lugar donde se pueda pegar un script).
 
 ## Detalles técnicos
@@ -116,7 +138,7 @@ src/
   knowledge.ts  Carga de la base de conocimiento
   config.ts     Variables de entorno
 public/
-  widget.js     Widget de chat embebible (sin dependencias)
+  widget.js     Widget de voz embebible (sin dependencias)
   index.html    Página demo
 knowledge/      Base de conocimiento (Markdown)
 docs/           Script de Google Sheets

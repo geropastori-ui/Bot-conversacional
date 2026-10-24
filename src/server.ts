@@ -41,7 +41,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.post("/api/chat", async (req: Request, res: Response) => {
-  const { sessionId, message, pageUrl } = req.body ?? {};
+  const { sessionId, message, pageUrl, channel } = req.body ?? {};
   if (typeof sessionId !== "string" || !isValidSessionId(sessionId)) {
     return void res.status(400).json({ error: "sessionId inválido" });
   }
@@ -58,7 +58,11 @@ app.post("/api/chat", async (req: Request, res: Response) => {
     return void res.status(409).json({ error: "Esperá a que termine la respuesta anterior." });
   }
 
-  const session = getOrCreateSession(sessionId, typeof pageUrl === "string" ? pageUrl.slice(0, 500) : null);
+  const session = getOrCreateSession(
+    sessionId,
+    typeof pageUrl === "string" ? pageUrl.slice(0, 500) : null,
+    channel === "voz" ? "voz" : "texto",
+  );
   if (session.userTurns >= config.maxUserTurns) {
     return void res.status(429).json({
       error: "Llegamos al límite de esta conversación. Dejanos tus datos o escribinos por nuestros canales de contacto.",

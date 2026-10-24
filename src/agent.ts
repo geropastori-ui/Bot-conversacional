@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { config } from "./config.js";
 import { loadKnowledge } from "./knowledge.js";
-import { buildSystemPrompt } from "./prompt.js";
+import { buildSystemPrompt, type Channel } from "./prompt.js";
 import { LeadInput, tools } from "./tools.js";
 import { saveSession, transcript, upsertLead, type Session } from "./store.js";
 import { sendLeadWebhook } from "./webhook.js";
@@ -9,14 +9,15 @@ import { sendLeadWebhook } from "./webhook.js";
 const client = new Anthropic();
 
 // El prompt de sistema (instrucciones + base de conocimiento) es fijo durante toda la vida
-// del proceso, así se cachea y cada mensaje cuesta mucho menos.
-const system: Anthropic.Beta.BetaTextBlockParam[] = [
-  {
-    type: "text",
-    text: buildSystemPrompt(loadKnowledge(config.knowledgeDir)),
-    cache_control: { type: "ephemeral" },
-  },
+// del proceso, así se cachea y cada mensaje cuesta mucho menos. Hay una versión por canal.
+const knowledge = loadKnowledge(config.knowledgeDir);
+const systemFor = (channel: Channel): Anthropic.Beta.BetaTextBlockParam[] => [
+  { type: "text", text: buildSystemPrompt(knowledge, channel), cache_control: { type: "ephemeral" } },
 ];
+const systems: Record<Channel, Anthropic.Beta.BetaTextBlockParam[]> = {
+  texto: systemFor("texto"),
+  voz: systemFor("voz"),
+};
 
 export type ChatEvent =
   | { type: "delta"; text: string }
@@ -42,7 +43,7 @@ export async function* chat(session: Session, userText: string): AsyncGenerator<
     const stream = client.beta.messages.stream({
       model: config.model,
       max_tokens: 16000,
-      system,
+      system: systems[session.channel],
       tools,
       messages: session.messages,
       cache_control: { type: "ephemeral" },
